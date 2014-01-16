@@ -27,26 +27,26 @@ function addProperty(o, symbol, modulePath, doWrap, returnPromise) {
 
     if (doWrap) {
         o[symbol] = function() {
-        	val = val || require(modulePath);
-        	var promise;
-        	var resCallback;
-        	var errorCallback;
-        	if (arguments.length && typeof arguments[arguments.length - 1] === 'function') {
+            val = val || require(modulePath);
+            var promise;
+            var resCallback;
+            var errorCallback;
+            if (arguments.length && typeof arguments[arguments.length - 1] === 'function') {
                 // If args exist and the last one is a function, it's the callback.
                 var args = Array.prototype.slice.call(arguments);
                 resCallback = errorCallback = args.pop();
                 promise = val.apply(o, args)
-        	} else {
-        		resCallback = null;
-        		errorCallback = function (err) { throw err; };
-            	promise = val.apply(o, arguments);
-        	}
+            } else {
+                resCallback = null;
+                errorCallback = function (err) { throw err; };
+                promise = val.apply(o, arguments);
+            }
 
-        	if (returnPromise) {
-        		return promise.then(resCallback, errorCallback);
-        	} else {
-        		promise.done(resCallback, errorCallback);
-        	}
+            if (returnPromise) {
+                return promise.then(resCallback, errorCallback);
+            } else {
+                promise.done(resCallback, errorCallback);
+            }
 
 
         };
@@ -117,10 +117,10 @@ plugman.commands =  {
 
         var promises = new Array();
         for (var i in cli_opts.plugin) {
-        	promises[i] = plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, opts)
-				.catch(function (reason) {
-					console.log("Install failed: " + reason);
-				});
+            promises[i] = plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, opts)
+                .catch(function (reason) {
+                    console.log("Install failed: " + reason);
+                });
         }
 
         return Q.allSettled(promises);
@@ -132,10 +132,10 @@ plugman.commands =  {
 
         var promises = new Array();
         for (var i in cli_opts.plugin) {
-        	promises[i] = plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, { www_dir: cli_opts.www })
-				.catch(function (reason) {
-					console.log("Uninstall failed: " + reason);
-				});
+            promises[i] = plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, { www_dir: cli_opts.www })
+                .catch(function (reason) {
+                    console.log("Uninstall failed: " + reason);
+                });
         }
 
         return Q.allSettled(promises);
