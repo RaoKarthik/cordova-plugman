@@ -20,21 +20,35 @@
 // copyright (c) 2013 Andrew Lunny, Adobe Systems
 
 var emitter = require('./src/events');
+var Q = require('q');
 
-function addProperty(o, symbol, modulePath, doWrap) {
+function addProperty(o, symbol, modulePath, doWrap, returnPromise) {
     var val = null;
 
     if (doWrap) {
         o[symbol] = function() {
-            val = val || require(modulePath);
-            if (arguments.length && typeof arguments[arguments.length - 1] === 'function') {
+        	val = val || require(modulePath);
+        	var promise;
+        	var resCallback;
+        	var errorCallback;
+        	if (arguments.length && typeof arguments[arguments.length - 1] === 'function') {
                 // If args exist and the last one is a function, it's the callback.
                 var args = Array.prototype.slice.call(arguments);
-                var cb = args.pop();
-                val.apply(o, args).done(cb, cb);
-            } else {
-                val.apply(o, arguments).done(null, function(err){ throw err; });
-            }
+                resCallback = errorCallback = args.pop();
+                promise = val.apply(o, args)
+        	} else {
+        		resCallback = null;
+        		errorCallback = function (err) { throw err; };
+            	promise = val.apply(o, arguments);
+        	}
+
+        	if (returnPromise) {
+        		return promise.then(resCallback, errorCallback);
+        	} else {
+        		promise.done(resCallback, errorCallback);
+        	}
+
+
         };
     } else {
         // The top-level plugman.foo
@@ -59,8 +73,8 @@ plugman = {
     raw:                {}
 };
 addProperty(plugman, 'help', './src/help');
-addProperty(plugman, 'install', './src/install', true);
-addProperty(plugman, 'uninstall', './src/uninstall', true);
+addProperty(plugman, 'install', './src/install', true, true);
+addProperty(plugman, 'uninstall', './src/uninstall', true, true);
 addProperty(plugman, 'fetch', './src/fetch', true);
 addProperty(plugman, 'prepare', './src/prepare');
 addProperty(plugman, 'config', './src/config', true);
@@ -100,13 +114,31 @@ plugman.commands =  {
             www_dir: cli_opts.www,
             searchpath: cli_opts.searchpath
         };
-        return plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin, cli_opts.plugins_dir, opts);
+
+        var promises = new Array();
+        for (var i in cli_opts.plugin) {
+        	promises[i] = plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, opts)
+				.catch(function (reason) {
+					console.log("Install failed: " + reason);
+				});
+        }
+
+        return Q.allSettled(promises);
     },
     'uninstall': function(cli_opts) {
         if(!cli_opts.platform || !cli_opts.project || !cli_opts.plugin) {
             return console.log(plugman.help());
         }
-        return plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin, cli_opts.plugins_dir, { www_dir: cli_opts.www });
+
+        var promises = new Array();
+        for (var i in cli_opts.plugin) {
+        	promises[i] = plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, { www_dir: cli_opts.www })
+				.catch(function (reason) {
+					console.log("Uninstall failed: " + reason);
+				});
+        }
+
+        return Q.allSettled(promises);
     },
     'adduser'  : function(cli_opts) {
         plugman.adduser(function(err) {
