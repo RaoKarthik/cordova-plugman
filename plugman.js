@@ -65,6 +65,16 @@ function addProperty(o, symbol, modulePath, doWrap, returnPromise) {
     });
 }
 
+function waitAll(promises) {
+    return Q.allSettled(promises).done(function (results) {
+        for (var i in results) {
+            if (results[i].state === "rejected") {
+                throw results[i].reason;
+            }
+        };
+    });
+}
+
 plugman = {
     on:                 emitter.addListener,
     off:                emitter.removeListener,
@@ -117,13 +127,10 @@ plugman.commands =  {
 
         var promises = new Array();
         for (var i in cli_opts.plugin) {
-            promises[i] = plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, opts)
-                .catch(function (reason) {
-                    console.log("Install failed: " + reason);
-                });
+            promises[i] = plugman.install(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, opts);
         }
 
-        return Q.allSettled(promises);
+        return waitAll(promises);
     },
     'uninstall': function(cli_opts) {
         if(!cli_opts.platform || !cli_opts.project || !cli_opts.plugin) {
@@ -132,13 +139,10 @@ plugman.commands =  {
 
         var promises = new Array();
         for (var i in cli_opts.plugin) {
-            promises[i] = plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, { www_dir: cli_opts.www })
-                .catch(function (reason) {
-                    console.log("Uninstall failed: " + reason);
-                });
+            promises[i] = plugman.uninstall(cli_opts.platform, cli_opts.project, cli_opts.plugin[i], cli_opts.plugins_dir, { www_dir: cli_opts.www });
         }
 
-        return Q.allSettled(promises);
+        return waitAll(promises);
     },
     'adduser'  : function(cli_opts) {
         plugman.adduser(function(err) {
